@@ -1,0 +1,34 @@
+ARG BASE_IMAGE=nvcr.io/nvidia/pytorch:25.02-py3
+FROM ${BASE_IMAGE}
+
+USER root
+
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      rdma-core \
+      ibverbs-utils \
+      ibverbs-providers \
+      build-essential \
+      git \
+      cmake \
+      make \
+      pkg-config \
+      numactl \
+      libnuma-dev \
+      libopenmpi-dev \
+      openmpi-bin \
+      iproute2 \
+      ethtool \
+      pciutils \
+      curl \
+      ca-certificates && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      libnccl2 \
+      libnccl-dev || true && \
+    python3 -m pip install --upgrade pip setuptools wheel && \
+    python3 -m pip install \
+      ninja \
+      packaging \
+      nvidia-nvshmem-cu12 \
+      mooncake-transfer-engine && \
+    rm -rf /var/lib/apt/lists/*

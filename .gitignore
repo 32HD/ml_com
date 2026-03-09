@@ -1,0 +1,23 @@
+# Local runtime/state
+.home/
+.local_tmp/
+.local_ttyd/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Secrets / local env
+.env
+.env.*
+!.env.ngc.example
+
+# OS/editor
+.DS_Store
+.vscode/
+.idea/
+
+# Large local artifacts
+third_party/

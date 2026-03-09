@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="theme-color" content="#0b1220" />
+    <title>Codex Mobile</title>
+    <link rel="stylesheet" href="/app.css" />
+  </head>
+  <body>
+    <div id="drawer-overlay" class="drawer-overlay">
+      <aside class="drawer" id="drawer">
+        <div class="drawer-header">
+          <strong>工作区</strong>
+          <button id="drawer-close" class="icon-btn" aria-label="关闭侧栏">×</button>
+        </div>
+
+        <section class="drawer-section">
+          <label class="section-label" for="repo-select">当前项目</label>
+          <select id="repo-select"></select>
+          <div class="split-actions">
+            <button id="resume-btn" class="primary">恢复共享会话</button>
+            <button id="new-btn">新建临时会话</button>
+          </div>
+        </section>
+
+        <section class="drawer-section">
+          <div class="section-head">
+            <span class="section-label">会话历史</span>
+            <button id="refresh-sessions" class="tiny-btn">刷新</button>
+          </div>
+          <div id="session-list" class="session-list"></div>
+          <button id="switch-latest" class="tiny-btn hidden">切到最新会话</button>
+          <div class="session-ops">
+            <button id="rename-session">重命名</button>
+            <button id="copy-session-link">复制会话链接</button>
+            <button id="repeat-last">重发上条</button>
+          </div>
+        </section>
+
+        <details class="drawer-section create-box">
+          <summary>新建项目（本地 + GitHub）</summary>
+          <div class="create-grid">
+            <input id="create-project-name" placeholder="项目名（例如 my_agent_app）" />
+            <input id="create-github-owner" placeholder="GitHub Owner（可选，不填用后端默认）" />
+            <input id="create-github-repo" placeholder="GitHub Repo 名（可选，默认同项目名）" />
+            <label><input id="create-github-enable" type="checkbox" checked /> 同时创建 GitHub 仓库</label>
+            <label><input id="create-github-private" type="checkbox" checked /> GitHub 私有仓库</label>
+            <button id="create-project-btn" class="primary">创建项目</button>
+            <small id="create-project-msg"></small>
+          </div>
+        </details>
+
+        <section class="drawer-section">
+          <div class="section-label">项目概览</div>
+          <div id="repo-cards" class="cards compact"></div>
+        </section>
+      </aside>
+    </div>
+
+    <header class="topbar">
+      <button id="menu-btn" class="icon-btn" aria-label="打开侧栏">☰</button>
+      <div class="title-stack">
+        <div id="header-title" class="title">Codex Mobile</div>
+        <div id="session-meta" class="meta">未连接会话</div>
+      </div>
+      <div class="top-actions">
+        <span id="status-pill" class="pill">idle</span>
+        <button id="sync-chat" class="icon-btn" aria-label="同步会话">⟳</button>
+      </div>
+    </header>
+
+    <main id="main">
+      <section id="page-dashboard" class="page">
+        <div class="panel hero">
+          <div>
+            <h2>项目工作台</h2>
+            <p>在左上角打开侧栏切换项目和会话。手机端优先使用“会话”页执行任务。</p>
+          </div>
+          <button class="primary" data-page-jump="chat">进入当前会话</button>
+        </div>
+        <div class="panel">
+          <h3>最近项目</h3>
+          <div id="dashboard-repos" class="cards"></div>
+        </div>
+      </section>
+
+      <section id="page-chat" class="page active">
+        <div id="approval-card" class="approval hidden">
+          <div id="approval-text">Codex 请求批准</div>
+          <div class="approval-actions">
+            <button id="approve-btn" class="ok">批准</button>
+            <button id="reject-btn" class="danger">拒绝</button>
+          </div>
+        </div>
+
+        <div class="quick-prompts">
+          <button class="quick-btn" data-template="继续推进当前任务，直接实施下一步并汇报结果。">继续推进</button>
+          <button class="quick-btn" data-template="请总结当前进展、阻塞点、下一步计划。">总结进展</button>
+          <button class="quick-btn" data-template="请修复当前失败点，并运行相关测试后给出结论。">修复并测试</button>
+          <button class="quick-btn" data-template="请给我本轮变更摘要（文件、原因、风险、回滚点）。">变更摘要</button>
+        </div>
+
+        <div id="chat-log" class="log"></div>
+
+        <div class="composer">
+          <textarea id="prompt" rows="3" placeholder="输入任务，例如：修复 xxx 报错并补测试"></textarea>
+          <div class="composer-actions">
+            <button id="send-btn" class="primary">发送任务</button>
+          </div>
+        </div>
+
+        <details class="keypad-wrap">
+          <summary>终端控制键（Esc/方向键/Enter）</summary>
+          <div class="keypad">
+            <div class="key-row">
+              <button class="key-btn" data-key="Escape">Esc</button>
+              <button class="key-btn" data-key="Tab">Tab</button>
+              <button class="key-btn key-enter" data-key="Enter">回车</button>
+            </div>
+            <div class="key-row key-arrows">
+              <button class="key-btn" data-key="Up">↑</button>
+              <button class="key-btn" data-key="Left">←</button>
+              <button class="key-btn" data-key="Down">↓</button>
+              <button class="key-btn" data-key="Right">→</button>
+            </div>
+            <div class="key-row">
+              <button class="key-btn key-danger" data-key="Ctrl+C">Ctrl+C</button>
+              <button class="key-btn" data-key="Backspace">退格</button>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      <section id="page-changes" class="page">
+        <div class="panel">
+          <div class="section-head">
+            <h3>改动文件</h3>
+            <button id="refresh-changes">刷新变更</button>
+          </div>
+          <div id="changes-files" class="list"></div>
+        </div>
+        <div class="panel">
+          <h3>Diff</h3>
+          <pre id="diff-view" class="diff"></pre>
+        </div>
+      </section>
+
+      <section id="page-files" class="page">
+        <div class="panel">
+          <div class="section-head">
+            <h3>最近文件</h3>
+            <button id="refresh-files">刷新文件</button>
+          </div>
+          <div id="recent-files" class="list"></div>
+        </div>
+        <div class="panel">
+          <h3>文件树（浅层）</h3>
+          <div id="tree-files" class="list"></div>
+        </div>
+        <div class="panel editor">
+          <input id="file-path" readonly />
+          <textarea id="file-content" rows="14"></textarea>
+          <button id="save-file" class="primary">保存文件</button>
+        </div>
+      </section>
+
+      <section id="page-run" class="page">
+        <div class="panel">
+          <h3>常用命令</h3>
+          <div class="actions">
+            <button data-cmd="git status -sb">Git Status</button>
+            <button data-cmd="pytest -q">默认测试</button>
+            <button data-cmd="codex --version">Codex 版本</button>
+          </div>
+          <pre id="run-output" class="diff"></pre>
+        </div>
+      </section>
+
+      <section id="page-more" class="page">
+        <div class="panel">
+          <h3>显示设置</h3>
+          <div class="actions">
+            <button id="chat-compact-toggle">紧凑模式: 关</button>
+            <button id="chat-font-dec">A-</button>
+            <button id="chat-font-inc">A+</button>
+          </div>
+        </div>
+        <div class="cards">
+          <a class="card portal" href="/term/">
+            <span class="portal-title">进入终端</span>
+            <small>/term/</small>
+          </a>
+          <a class="card portal" href="/ide/">
+            <span class="portal-title">进入桌面 IDE</span>
+            <small>/ide/</small>
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <button data-page="dashboard">
+        <span class="nav-icon">◈</span>
+        <span class="nav-text">项目</span>
+      </button>
+      <button data-page="chat" class="active">
+        <span class="nav-icon">✦</span>
+        <span class="nav-text">会话</span>
+      </button>
+      <button data-page="changes">
+        <span class="nav-icon">≋</span>
+        <span class="nav-text">变更</span>
+      </button>
+      <button data-page="files">
+        <span class="nav-icon">▣</span>
+        <span class="nav-text">文件</span>
+      </button>
+      <button data-page="run">
+        <span class="nav-icon">▶</span>
+        <span class="nav-text">运行</span>
+      </button>
+      <button data-page="more">
+        <span class="nav-icon">⋯</span>
+        <span class="nav-text">更多</span>
+      </button>
+    </nav>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

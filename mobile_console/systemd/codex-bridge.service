@@ -1,0 +1,24 @@
+[Unit]
+Description=codex-bridge (FastAPI backend for Codex Mobile)
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=%h/.local/share/codex-mobile/codex-bridge.env
+ExecStartPre=/usr/bin/mkdir -p %h/.local/run/codex-bridge
+ExecStartPre=/usr/bin/chmod 755 %h/.local/run/codex-bridge
+ExecStartPre=/usr/bin/rm -f %h/.local/run/codex-bridge/codex-bridge.sock
+ExecStart=%h/.local/share/codex-mobile/venv/bin/uvicorn \
+  app.main:app \
+  --app-dir ${WORKSPACE_ROOT}/mobile_console/backend \
+  --uds %h/.local/run/codex-bridge/codex-bridge.sock \
+  --timeout-graceful-shutdown 8 \
+  --timeout-keep-alive 20 \
+  --proxy-headers
+Restart=always
+RestartSec=2
+KillSignal=SIGINT
+TimeoutStopSec=10
+
+[Install]
+WantedBy=default.target

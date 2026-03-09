@@ -1,0 +1,56 @@
+name: ngc_stack
+
+x-ngc-base: &ngc-base
+  image: ${NGC_IMAGE:-nvcr.io/nvidia/cuda:12.6.1-base-ubuntu22.04}
+  init: true
+  user: "${UID:-1000}:${GID:-1000}"
+  working_dir: /workspace
+  command: ["sleep", "infinity"]
+  gpus: ${NGC_GPUS:-all}
+  environment:
+    NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
+    NVIDIA_DRIVER_CAPABILITIES: ${NVIDIA_DRIVER_CAPABILITIES:-compute,utility}
+    HOME: /workspace/.home
+    TZ: ${TZ:-UTC}
+    LD_LIBRARY_PATH: /opt/hpcx/ucx/lib:/opt/hpcx/ucc/lib:/opt/hpcx/ompi/lib:/usr/local/lib/python3.12/dist-packages/torch/lib:/usr/local/lib/python3.12/dist-packages/torch_tensorrt/lib:/usr/local/cuda/compat/lib:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
+  volumes:
+    - type: bind
+      source: .
+      target: /workspace
+  read_only: true
+  tmpfs:
+    - /tmp:exec,size=2g
+    - /var/tmp:size=1g
+    - /run:size=256m
+  shm_size: "8gb"
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  cap_add:
+    - IPC_LOCK
+  ulimits:
+    memlock: -1
+    stack: 67108864
+  pids_limit: 4096
+  device_cgroup_rules:
+    - "c 231:* rmw"
+  devices:
+    - /dev/infiniband:/dev/infiniband
+
+services:
+  ngc-safe:
+    <<: *ngc-base
+    container_name: ngc-safe
+    networks:
+      - ngc_net
+
+  ngc-rdma:
+    <<: *ngc-base
+    container_name: ngc-rdma
+    profiles: ["rdma"]
+    network_mode: host
+
+networks:
+  ngc_net:
+    driver: bridge
