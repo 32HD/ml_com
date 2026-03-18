@@ -9,6 +9,8 @@ if ! need_cmd docker; then die "docker is required"; fi
 if ! need_cmd tmux; then die "tmux is required"; fi
 if ! need_cmd python3; then die "python3 is required"; fi
 if ! need_cmd openssl; then die "openssl is required"; fi
+if ! need_cmd node; then die "node is required for frontend build"; fi
+if ! need_cmd npm; then die "npm is required for frontend build"; fi
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd)"
@@ -45,6 +47,7 @@ BRIDGE_RUN_DIR="$HOME/.local/run/codex-bridge"
 TTYD_RUN_DIR="$HOME/.local/run/ttyd"
 CODE_RUN_DIR="$HOME/.local/run/code-server"
 FRONTEND_DIR="$WORKSPACE_ROOT/mobile_console/frontend"
+FRONTEND_DIST_DIR="$FRONTEND_DIR/dist"
 
 TTYD_BIN="${TTYD_BIN:-$HOME/.local/bin/ttyd}"
 CODE_SERVER_BIN="${CODE_SERVER_BIN:-$HOME/.local/bin/code-server}"
@@ -190,6 +193,14 @@ TimeoutStopSec=10
 WantedBy=default.target
 EOF2
 
+log "Building mobile frontend"
+if [ -f "$FRONTEND_DIR/package-lock.json" ]; then
+  npm --prefix "$FRONTEND_DIR" ci >/dev/null
+else
+  npm --prefix "$FRONTEND_DIR" install >/dev/null
+fi
+npm --prefix "$FRONTEND_DIR" run build >/dev/null
+
 cp "$WORKSPACE_ROOT/mobile_console/nginx/mobile-console.conf" "$WEBTERM_NGINX_DIR/default.conf"
 
 systemctl --user daemon-reload
@@ -229,7 +240,7 @@ docker run -d --name "$WEBTERM_CONTAINER_NAME" --restart unless-stopped \
   -v "$TTYD_RUN_DIR:/run/ttyd" \
   -v "$CODE_RUN_DIR:/run/code-server" \
   -v "$BRIDGE_RUN_DIR:/run/codex-bridge" \
-  -v "$FRONTEND_DIR:/usr/share/nginx/html/mobile:ro" \
+  -v "$FRONTEND_DIST_DIR:/usr/share/nginx/html/mobile:ro" \
   nginx:1.27-alpine >/dev/null
 
 for i in {1..20}; do

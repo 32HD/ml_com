@@ -14,6 +14,13 @@ SessionStatus = Literal[
     "completed",
 ]
 
+SessionExecutionMode = Literal[
+    "inspect",
+    "workspace",
+    "full-auto",
+    "external",
+]
+
 
 class RepoOpenRequest(BaseModel):
     path: str = Field(..., description="Absolute path to repo")
@@ -34,6 +41,10 @@ class PromptRequest(BaseModel):
     prompt: str
 
 
+class SessionLaunchRequest(BaseModel):
+    execution_mode: Optional[SessionExecutionMode] = None
+
+
 class RenameSessionRequest(BaseModel):
     name: str
 
@@ -45,6 +56,10 @@ class KeyRequest(BaseModel):
 
 class DecisionRequest(BaseModel):
     auto_approve_type: Optional[str] = None
+
+
+class SessionFocusRequest(BaseModel):
+    reason: Optional[str] = None
 
 
 class RunCmdRequest(BaseModel):
@@ -68,6 +83,7 @@ class RepoInfo(BaseModel):
     dirty_files: int
     session_status: Optional[str] = None
     updated_at: Optional[str] = None
+    is_default: bool = False
 
 
 class ProjectInitResponse(BaseModel):
@@ -87,7 +103,30 @@ class SessionInfo(BaseModel):
     status: SessionStatus
     created_at: str
     updated_at: str
+    last_activity_at: Optional[str] = None
     last_prompt: Optional[str] = None
+    execution_mode: Optional[SessionExecutionMode] = None
+    codex_session_id: Optional[str] = None
+    codex_session_file: Optional[str] = None
+    codex_source: Optional[str] = None
+    codex_model: Optional[str] = None
+
+
+class SessionHubResponse(BaseModel):
+    repo_id: str
+    generated_at: str
+    focus_session_id: Optional[str] = None
+    focus_reason: Optional[str] = None
+    focus_updated_at: Optional[str] = None
+    current_session_id: Optional[str] = None
+    suggested_session_id: Optional[str] = None
+    shared_session_id: Optional[str] = None
+    live_session_ids: list[str] = Field(default_factory=list)
+    recent_session_ids: list[str] = Field(default_factory=list)
+    archived_session_ids: list[str] = Field(default_factory=list)
+    external_recent_session_ids: list[str] = Field(default_factory=list)
+    sync_hint: Optional[str] = None
+    sessions: list[SessionInfo] = Field(default_factory=list)
 
 
 class CommandResult(BaseModel):

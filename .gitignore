@@ -21,3 +21,13 @@ __pycache__/
 
 # Large local artifacts
 third_party/
+
+# Frontend build artifacts
+mobile_console/frontend/node_modules/
+mobile_console/frontend/dist/
+mobile_console/frontend/output/
+
+# Browser/test artifacts
+.playwright-cli/
+output/
+output_playwright_tmp_home.png

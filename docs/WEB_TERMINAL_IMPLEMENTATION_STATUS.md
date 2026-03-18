@@ -37,9 +37,13 @@
 - Chat：可查看当前项目历史会话列表，并按会话恢复
 - Chat：新增“同步会话 / 重发上条 / 一键模板任务（继续推进、总结进展、修复并测试、变更摘要）”
 - Chat：新增会话元信息条（会话ID、shared/temp、状态、更新时间）
+- Chat：会话元信息新增执行模式展示（巡检 / 开发 / 全自动 / 外部）
 - Chat：新增“重命名会话”“复制会话链接（repo+session 深链接）”
 - Chat：新增 URL 直达（`?repo=<id>&session=<id>&page=chat`）与会话草稿/未发送消息保护（弱网时不丢）
 - Chat：SSE 增量输出已优化，降低 tmux 屏幕重绘导致的“刷屏/看不清输出”
+- Chat：新增结构化时间线，优先展示 Codex 会话 JSONL 中的任务 / 推理 / 工具调用 / 输出 / 最终答复
+- More：新增三档执行模式开关，恢复共享会话时可自动按新模式重建
+- More：新增每项目两条自定义快捷任务，可持久化到本地存储
 - Approval 卡片：批准/拒绝（基于输出关键字识别）
 - Changes：Git status + diff
 - Files：最近文件 + 树 + 文件读取/保存
@@ -55,6 +59,8 @@
 - 任务输入：`/api/sessions/{id}/prompt`
 - 会话快照：`GET /api/sessions/{id}/snapshot?lines=...`（用于跨端同步上下文）
 - 实时流：`/api/sessions/{id}/stream`（SSE）
+- 结构化事件：自动关联 `~/.codex/sessions/*.jsonl`，在快照和 SSE 中回传 timeline 事件与模型元数据
+- 启动模式：`inspect` / `workspace` / `full-auto`，通过 `codex-mobile --mobile-mode` 注入对应 sandbox/approval 策略
 - 批准接口：`approve/reject`
 - Git：status/diff/diff file
 - 文件：recent/tree/read/write
@@ -146,6 +152,8 @@ systemctl --user start codex-bridge.service
 - 原因：当前流程无 sudo/root 防火墙变更步骤。
 - 建议后续补充（需 sudo）：`ufw`/`iptables` 按 VPN CIDR 限制。
 - Approval 目前为输出关键字识别，不是 Codex CLI 结构化原生审批事件。
+- 结构化时间线当前采用“Codex session JSONL 自动匹配 + tmux 日志兜底”的兼容方案；多会话并发时仍可能需要继续提升匹配精度。
+- 执行模式当前主要影响“新建临时会话”和“恢复共享会话”；已运行中的普通临时 tmux 会话不会被后台强制切模。
 - 前端 UI 已是 mobile-first，但仍是 MVP，未实现完整历史检索与复杂摘要卡片。
 
 ## 9. 当前访问方式

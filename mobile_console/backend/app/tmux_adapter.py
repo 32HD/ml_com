@@ -49,9 +49,11 @@ def create_session(
 
 
 def send_input(session_name: str, text: str, enter: bool = True) -> None:
-    _run_tmux(["send-keys", "-t", session_name, text])
+    _run_tmux(["set-buffer", "--", text])
+    _run_tmux(["paste-buffer", "-d", "-t", session_name])
     if enter:
-        # Codex TUI reliably treats C-m as submit; Enter can be interpreted as plain newline.
+        # Codex TUI reliably treats C-m as submit; some builds still need a second Enter,
+        # which is handled by the session manager fallback after observing pane state.
         _run_tmux(["send-keys", "-t", session_name, "C-m"])
 
 

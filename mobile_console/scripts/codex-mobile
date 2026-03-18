@@ -2,20 +2,47 @@
 set -euo pipefail
 
 if [ "$#" -lt 1 ]; then
-  echo "Usage: codex-mobile <repo_dir> [codex args...]" >&2
+  echo "Usage: codex-mobile <repo_dir> [--mobile-mode MODE] [codex args...]" >&2
   exit 1
 fi
 
 repo_dir="$1"
 shift || true
 
+mobile_mode="${CODEX_MOBILE_MODE:-full-auto}"
+if [ "${1:-}" = "--mobile-mode" ]; then
+  if [ "$#" -lt 2 ]; then
+    echo "--mobile-mode requires a value" >&2
+    exit 1
+  fi
+  mobile_mode="$2"
+  shift 2
+fi
+
 cd "$repo_dir"
 export TERM="xterm-256color"
 export PYTHONUNBUFFERED=1
 
-# Mobile default: full filesystem/network access and no per-command approval prompts.
-# Note: sudo-password prompts are still handled by the OS/sudo itself.
+case "$mobile_mode" in
+  inspect)
+    sandbox_mode="read-only"
+    approval_policy="untrusted"
+    ;;
+  workspace)
+    sandbox_mode="workspace-write"
+    approval_policy="on-request"
+    ;;
+  full-auto)
+    sandbox_mode="danger-full-access"
+    approval_policy="never"
+    ;;
+  *)
+    echo "Unsupported mobile mode: $mobile_mode" >&2
+    exit 1
+    ;;
+esac
+
 exec codex \
-  --sandbox danger-full-access \
-  --ask-for-approval never \
+  --sandbox "$sandbox_mode" \
+  --ask-for-approval "$approval_policy" \
   "$@"
