@@ -684,7 +684,37 @@ class SessionManager:
             updates["last_prompt"] = None
         self.db.update_session(session_id, **updates)
 
+    def _should_accept_last_prompt(
+        self,
+        sess: Dict[str, Any],
+        prompt: Any,
+        *,
+        prompt_timestamp: Any = None,
+    ) -> bool:
+        candidate = self._normalize_prompt_text(prompt) or ""
+        if not candidate:
+            return False
+        current = self._normalize_prompt_text(sess.get("last_prompt")) or ""
+        if not current or current == candidate:
+            return True
+        current_ts = self._parse_ts(sess.get("last_activity_at") or sess.get("updated_at") or sess.get("created_at"))
+        candidate_ts = self._parse_ts(prompt_timestamp)
+        if not current_ts or not candidate_ts:
+            return False
+        return candidate_ts > current_ts
+
     def _update_binding(self, session_id: str, sess: Dict[str, Any], **fields: Any) -> None:
+        prompt_timestamp = fields.pop("last_prompt_timestamp", None)
+        incoming_activity_at = fields.get("last_activity_at")
+        merged_activity_at = self._latest_timestamp(sess.get("last_activity_at"), incoming_activity_at)
+        if incoming_activity_at and merged_activity_at:
+            fields["last_activity_at"] = merged_activity_at
+        if "last_prompt" in fields and not self._should_accept_last_prompt(
+            sess,
+            fields.get("last_prompt"),
+            prompt_timestamp=prompt_timestamp or incoming_activity_at,
+        ):
+            fields.pop("last_prompt", None)
         next_codex_id = fields.get("codex_session_id", sess.get("codex_session_id"))
         current_codex_id = sess.get("codex_session_id")
         if next_codex_id and current_codex_id and str(next_codex_id).strip() != str(current_codex_id).strip():
@@ -900,6 +930,7 @@ class SessionManager:
                     codex_source=meta.get("source"),
                     codex_model=meta.get("model"),
                     last_activity_at=self._latest_timestamp(sess.get("last_activity_at"), meta.get("timestamp")),
+                    last_prompt_timestamp=meta.get("last_timestamp") or meta.get("timestamp"),
                     **({"last_prompt": meta.get("last_prompt")} if meta.get("last_prompt") else {}),
                 )
                 meta["path"] = str(path)
@@ -911,7 +942,12 @@ class SessionManager:
             meta = self._extract_codex_session_meta(known_path)
             if meta and self._session_accepts_meta(sess, meta) and not self._stale_live_binding(sess, meta):
                 if meta.get("last_prompt"):
-                    self.db.update_session(session_id, last_prompt=meta.get("last_prompt"))
+                    self._update_binding(
+                        session_id,
+                        sess,
+                        last_prompt=meta.get("last_prompt"),
+                        last_prompt_timestamp=meta.get("last_timestamp") or meta.get("timestamp"),
+                    )
                 meta["path"] = str(known_path)
                 return meta
             self._clear_stale_binding(session_id, sess, meta)
@@ -929,6 +965,7 @@ class SessionManager:
                     codex_source=thread_meta.get("source"),
                     codex_model=thread_meta.get("model"),
                     last_activity_at=self._latest_timestamp(sess.get("last_activity_at"), thread_meta.get("timestamp")),
+                    last_prompt_timestamp=thread_meta.get("last_timestamp") or thread_meta.get("timestamp"),
                     **({"last_prompt": thread_meta.get("last_prompt")} if thread_meta.get("last_prompt") else {}),
                 )
                 thread_meta["path"] = str(thread_path)
@@ -966,6 +1003,7 @@ class SessionManager:
             codex_source=best_meta.get("source"),
             codex_model=best_meta.get("model"),
             last_activity_at=self._latest_timestamp(sess.get("last_activity_at"), best_meta.get("timestamp")),
+            last_prompt_timestamp=best_meta.get("last_timestamp") or best_meta.get("timestamp"),
             **({"last_prompt": best_meta.get("last_prompt")} if best_meta.get("last_prompt") else {}),
         )
         best_meta["path"] = str(best_path)
@@ -1049,6 +1087,8 @@ class SessionManager:
                 if execution_mode:
                     updates["execution_mode"] = execution_mode
                 if updates:
+                    if meta.get("last_prompt"):
+                        updates["last_prompt_timestamp"] = meta.get("last_timestamp") or activity_at
                     self._update_binding(existing["id"], existing, **updates)
                 continue
 
@@ -1069,6 +1109,8 @@ class SessionManager:
                         updates["execution_mode"] = execution_mode
                     if not linked.get("name"):
                         updates["name"] = default_name
+                if meta.get("last_prompt"):
+                    updates["last_prompt_timestamp"] = meta.get("last_timestamp") or activity_at
                 self._update_binding(
                     linked["id"],
                     linked,
@@ -1087,6 +1129,7 @@ class SessionManager:
                 created["id"],
                 created,
                 last_activity_at=activity_at,
+                last_prompt_timestamp=meta.get("last_timestamp") or activity_at,
                 last_prompt=meta.get("last_prompt"),
                 codex_session_id=meta.get("id"),
                 codex_session_file=str(f),

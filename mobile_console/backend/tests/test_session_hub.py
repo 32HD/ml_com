@@ -147,6 +147,38 @@ class SessionHubTests(unittest.TestCase):
         self.assertIsNotNone(refreshed)
         self.assertEqual(refreshed["status"], "running")
 
+    def test_update_binding_does_not_overwrite_newer_last_prompt(self) -> None:
+        session = self.db.create_session(
+            self.repo_id,
+            "codex_demo_bound",
+            "running",
+            name="绑定会话",
+            execution_mode="full-auto",
+        )
+        self.db.update_session(
+            session["id"],
+            codex_session_id="sess-bound",
+            codex_session_file=str(Path(self.tempdir.name) / "rollout-test.jsonl"),
+            codex_source="cli",
+            last_prompt="新的手机 prompt",
+            last_activity_at="2026-03-18T10:00:00+00:00",
+        )
+        updated = self.db.get_session(session["id"])
+        assert updated is not None
+
+        self.mgr._update_binding(
+            session["id"],
+            updated,
+            last_prompt="旧的历史 prompt",
+            last_prompt_timestamp="2026-03-18T09:00:00+00:00",
+            last_activity_at="2026-03-18T09:00:00+00:00",
+        )
+
+        refreshed = self.db.get_session(session["id"])
+        self.assertIsNotNone(refreshed)
+        self.assertEqual(refreshed["last_prompt"], "新的手机 prompt")
+        self.assertEqual(refreshed["last_activity_at"], "2026-03-18T10:00:00+00:00")
+
 
 if __name__ == "__main__":
     unittest.main()
